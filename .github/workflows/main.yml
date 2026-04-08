@@ -14,8 +14,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          clean: true
+
+      # DEBUG STEP: This will show us exactly why it can't find the folder
+      - name: List files for debugging
+        run: |
+          echo "Listing root directory:"
+          ls -F
+          echo "Checking for Dockerfiles:"
+          find . -name "Dockerfile"
 
       - name: Prepare Lowercase Owner Name
         run: |
@@ -33,16 +39,17 @@ jobs:
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
-          # We set the context to the root and point specifically to the file
           context: .
+          # If the debug step shows "Backend/", change this to ./Backend/Dockerfile
           file: ./backend/Dockerfile
           push: true
-          tags: ghcr.io/${{ env.OWNER_LC }}/week3:latest
+          tags: ghcr.io/${{ env.OWNER_LC }}/week3-backend:latest
 
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
           context: .
+          # If the debug step shows "Frontend/", change this to ./Frontend/Dockerfile
           file: ./frontend/Dockerfile
           push: true
-          tags: ghcr.io/${{ env.OWNER_LC }}/week3/templates:latest
+          tags: ghcr.io/${{ env.OWNER_LC }}/week3-frontend:latest
