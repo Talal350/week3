@@ -1,53 +1,37 @@
 name: Self-Hosted CI/CD
-
+ 
 on:
   push:
     branches: [ "main" ]
-
+ 
 jobs:
   build-and-push:
     runs-on: self-hosted
     permissions:
       contents: read
       packages: write
-
+ 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # This step helps you see if the folders "backend" and "frontend" actually exist
-      - name: Debug - List Files
-        run: ls -la
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+ 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+ 
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: ./backend 
           push: true
-          tags: ghcr.io/talal350/week3-backend:latest
-          # Optional: Point to a specific Dockerfile if it's named differently
-          # file: ./backend/Dockerfile 
-
+          tags: ghcr.io/${{ github.repository_owner }}/week3:latest
+ 
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
+          context: ./frontend 
           push: true
-          tags: ghcr.io/talal350/week3-frontend:latest
-
-      - name: Deploy to Runner
-        run: |
-          docker pull ghcr.io/talal350/week3-backend:latest
-          docker pull ghcr.io/talal350/week3-frontend:latest
-          # Re-deploying using Docker Compose (assuming docker-compose.yml is in root)
-          docker compose up -d --force-recreate
+          tags: ghcr.io/${{ github.repository_owner }}/week3/templates:lates
