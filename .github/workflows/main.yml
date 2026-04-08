@@ -10,12 +10,11 @@ jobs:
     permissions:
       contents: read
       packages: write
-
+    outputs:
+      owner_lc: ${{ env.OWNER_LC }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          clean: true
 
       - name: Prepare Lowercase Owner Name
         run: |
@@ -30,33 +29,38 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # This step finds the Dockerfile regardless of folder name (backend/Backend/src/backend)
-      - name: Locate Dockerfiles
-        id: locate
-        run: |
-          BACKEND_PATH=$(find . -ipath "*/backend/Dockerfile" | head -n 1)
-          FRONTEND_PATH=$(find . -ipath "*/frontend/Dockerfile" | head -n 1)
-          
-          echo "found_backend=$BACKEND_PATH" >> $GITHUB_OUTPUT
-          echo "found_frontend=$FRONTEND_PATH" >> $GITHUB_OUTPUT
-          
-          echo "Found Backend at: $BACKEND_PATH"
-          echo "Found Frontend at: $FRONTEND_PATH"
-
       - name: Build and push Backend
-        if: steps.locate.outputs.found_backend != ''
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ${{ steps.locate.outputs.found_backend }}
+          context: ./backend
           push: true
           tags: ghcr.io/${{ env.OWNER_LC }}/week3-backend:latest
 
       - name: Build and push Frontend
-        if: steps.locate.outputs.found_frontend != ''
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ${{ steps.locate.outputs.found_frontend }}
+          context: ./frontend
           push: true
           tags: ghcr.io/${{ env.OWNER_LC }}/week3-frontend:latest
+
+  deploy:
+    runs-on: self-hosted
+    needs: build-and-push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy with Docker Compose
+        run: |
+          # Pull the latest images
+          docker compose pull
+          
+          # Restart the containers in detached mode
+          docker compose up -d --remove-orphans
