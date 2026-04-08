@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true # Forces a clean workspace
+          clean: true
 
       - name: Prepare Lowercase Owner Name
         run: |
@@ -29,10 +29,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.WEEK3T }}
 
-      # This step dynamically finds the Dockerfiles so path/case errors don't stop the build
       - name: Locate Dockerfiles
         id: locate
         run: |
+          # The ipath search handles case-sensitivity (Backend vs backend)
           B_PATH=$(find . -ipath "*/backend/Dockerfile" | head -n 1)
           F_PATH=$(find . -ipath "*/frontend/Dockerfile" | head -n 1)
           echo "backend_file=$B_PATH" >> $GITHUB_OUTPUT
@@ -78,11 +78,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.WEEK3T }}
 
+      # FIXED: Removed the double "- name" and fixed indentation
       - name: Deploy with Docker Compose
-        - name: Deploy on Localhost
         run: |
-          # Pull the fresh images from GitHub to your local machine
+          # 1. Pull the fresh images from GHCR
           docker compose pull
           
-          # Restart the local containers
+          # 2. Restart local containers
           docker compose up -d --remove-orphans
