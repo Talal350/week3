@@ -1,37 +1,48 @@
 name: Self-Hosted CI/CD
- 
+
 on:
   push:
     branches: [ "main" ]
- 
+
 jobs:
   build-and-push:
     runs-on: self-hosted
     permissions:
       contents: read
       packages: write
- 
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
- 
+
+      # This step handles the "repository name must be lowercase" error 
+      # by creating a lowercase version of your username.
+      - name: Prepare Lowercase Owner Name
+        id: prep
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: '${{ github.repository_owner }}'
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
- 
+
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
           context: ./backend 
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/week3:latest
- 
+          # Uses the lowercase environment variable
+          tags: ghcr.io/${{ env.OWNER_LC }}/week3:latest
+
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend 
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/week3/templates:lates
+          # Fixed the typo from 'lates' to 'latest'
+          tags: ghcr.io/${{ env.OWNER_LC }}/week3/templates:latest
