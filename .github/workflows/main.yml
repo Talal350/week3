@@ -79,5 +79,10 @@ jobs:
           password: ${{ secrets.WEEK3T }}
 
       - name: Deploy with Docker Compose
-        run: 
+        - name: Deploy on Localhost
+        run: |
+          # Pull the fresh images from GitHub to your local machine
+          docker compose pull
+          
+          # Restart the local containers
           docker compose up -d --remove-orphans
