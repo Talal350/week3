@@ -10,11 +10,17 @@ jobs:
     permissions:
       contents: read
       packages: write
-    outputs:
-      owner_lc: ${{ env.OWNER_LC }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # DEBUG STEP: This helps identify if folders are named "Backend" vs "backend"
+      - name: List files for debugging
+        run: |
+          echo "Listing root directory:"
+          ls -F
+          echo "Checking for Dockerfiles:"
+          find . -name "Dockerfile"
 
       - name: Prepare Lowercase Owner Name
         run: |
@@ -32,14 +38,16 @@ jobs:
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: .
+          file: ./backend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.OWNER_LC }}/week3-backend:latest
 
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
+          context: .
+          file: ./frontend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.OWNER_LC }}/week3-frontend:latest
 
@@ -59,7 +67,7 @@ jobs:
 
       - name: Deploy with Docker Compose
         run: |
-          # Pull the latest images
+          # Pull the latest images defined in your docker-compose.yml
           docker compose pull
           
           # Restart the containers in detached mode
