@@ -79,8 +79,5 @@ jobs:
           password: ${{ secrets.WEEK3T }}
 
       - name: Deploy with Docker Compose
-        run: |
-          # Pull the latest images
-          docker compose pull
-          # Restart the containers in detached mode
+        run: 
           docker compose up -d --remove-orphans
