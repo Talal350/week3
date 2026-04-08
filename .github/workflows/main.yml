@@ -25,22 +25,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build Backend
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
-          # If your Dockerfile is INSIDE the backend folder:
           context: ./backend
-          file: ./backend/Dockerfile
           push: true
           tags: ghcr.io/talal350/week3-backend:latest
 
-      # Build Frontend
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
-          # If your Dockerfile is INSIDE the frontend folder:
           context: ./frontend
-          file: ./frontend/Dockerfile
           push: true
           tags: ghcr.io/talal350/week3-frontend:latest
+
+      # --- NEW DEPLOYMENT STEP ---
+      - name: Deploy to Self-Hosted Runner
+        run: |
+          docker pull ghcr.io/talal350/week3-backend:latest
+          docker pull ghcr.io/talal350/week3-frontend:latest
+          # Use docker-compose if you have one, or restart containers manually
+          docker compose up -d --force-recreate
