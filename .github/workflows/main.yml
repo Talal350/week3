@@ -84,5 +84,6 @@ jobs:
                cd /home/cybersecurity/week3
                pwd
                ls -la
+               docker compose pull
                docker-compose down
                docker-compose up -d
