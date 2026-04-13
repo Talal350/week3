@@ -5,7 +5,6 @@ on:
     branches:
       - main
 
-
 jobs:
   build-and-push:
     runs-on: self-hosted
@@ -35,16 +34,20 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/talal350/week3:latest
+          tags: |
+            ghcr.io/talal350/week3:latest
+            ghcr.io/talal350/week3:${{ github.sha }}
 
       # ---------------- FRONTEND ----------------
       - name: Build and Push Frontend
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./templates/Dockerfile
+          context: ./templates
+          file: ./Dockerfile
           push: true
-          tags: ghcr.io/talal350/week3-templates:latest
+          tags: |
+            ghcr.io/talal350/week3-templates:latest
+            ghcr.io/talal350/week3-templates:${{ github.sha }}
 
 
   deploy:
@@ -56,7 +59,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
-          username: root
+          username: deploy
           key: ${{ secrets.SSH_KEY }}
           script: |
             set -e
@@ -65,9 +68,11 @@ jobs:
 
             echo "${{ secrets.WEEK3T }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            docker compose down
+            # Pull latest images
+            docker compose pull
 
-            docker image prune -f
-            docker container prune -f
+            # Restart containers safely
+            docker compose up -d --remove-orphans
 
-            docker compose up -d
+            # Clean old unused images (safe cleanup)
+            docker image prune -f --filter "until=24h"
