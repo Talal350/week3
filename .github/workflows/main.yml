@@ -2,85 +2,61 @@ name: Self-Hosted CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build-and-push:
+  build:
     runs-on: self-hosted
+
     permissions:
       contents: read
       packages: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          clean: true
 
-      - name: Prepare Lowercase Owner Name
-        run: |
-          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
-        env:
-          OWNER: '${{ github.repository_owner }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.WEEK3T }}
+          password: ${{ secrets.JAMALTOKEN }}
 
-      - name: Locate Dockerfiles
-        id: locate
-        run: |
-          # The ipath search handles case-sensitivity (Backend vs backend)
-          B_PATH=$(find . -ipath "*/backend/Dockerfile" | head -n 1)
-          F_PATH=$(find . -ipath "*/frontend/Dockerfile" | head -n 1)
-          echo "backend_file=$B_PATH" >> $GITHUB_OUTPUT
-          echo "frontend_file=$F_PATH" >> $GITHUB_OUTPUT
-          echo "Found Backend at: $B_PATH"
-          echo "Found Frontend at: $F_PATH"
-
-      - name: Build and push Backend
-        if: steps.locate.outputs.backend_file != ''
+      - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ steps.locate.outputs.backend_file }}
+          file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ env.OWNER_LC }}/week3-backend:latest
+          tags: ghcr.io/jamaltaffal/backend:latest
 
-      - name: Build and push Frontend
-        if: steps.locate.outputs.frontend_file != ''
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ${{ steps.locate.outputs.frontend_file }}
-          push: true
-          tags: ghcr.io/${{ env.OWNER_LC }}/week3-frontend:latest
 
   deploy:
-    runs-on: self-hosted
-    needs: build-and-push
+    runs-on: ubuntu-latest
+    needs: build
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Prepare Lowercase Owner Name
-        run: |
-          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
-        env:
-          OWNER: '${{ github.repository_owner }}'
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - name: Deploy to backend server via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.WEEK3T }}
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.JAMALSECRETS }}
+          script: |
+            set -e
 
-      # FIXED: Removed the double "- name" and fixed indentation
-      - name: Deploy with Docker Compose
-        run: |
-               cd /home/cybersecurity/week3
-               docker-compose down
-               docker-compose up -d
+            cd /root/jamal-docker-app
+
+            echo "${{ secrets.JAMALTOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            docker compose down backend || true
+
+            docker image prune -f
+            docker container prune -f
+
+            docker compose up -d backend
