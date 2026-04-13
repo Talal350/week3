@@ -57,9 +57,7 @@ jobs:
     needs: build-and-push
     steps:
     - name: Deploy locally with Docker Compose
-      run: 
-      
-   
+      run:
             set -e
 
             cd /home/cybersecurity/week3
@@ -67,4 +65,4 @@ jobs:
             echo "${{ secrets.WEEK3T }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             docker-compose down
-            docker-compose up -d 
+            docker-compose up -d
